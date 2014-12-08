@@ -6,7 +6,7 @@ mvn clean package
 
 # run
 
-java -cp target/JAR-with-dependencies.jar com.jigarjoshi.visulizationserver.EventServer
+    java -cp target/JAR-with-dependencies.jar com.jigarjoshi.visulizationserver.EventServer
 
 # requirements
 

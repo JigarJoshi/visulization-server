@@ -12,3 +12,5 @@ java -cp target/JAR-with-dependencies.jar com.jigarjoshi.visulizationserver.Even
 
 JDK 1.8
 Maven 3.1
+
+note: this is quick and *dirty* implementation

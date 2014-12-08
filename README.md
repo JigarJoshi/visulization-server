@@ -2,7 +2,7 @@ visualization  web socket server, current implementation is for test dataset
 
 # build
 
-mvn clean package
+    mvn clean package
 
 # run
 

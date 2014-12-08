@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>realtime data map</title>
+    <style>
+        html, body, #map-canvas {
+        height: 100%;
+        margin: 0px;
+        padding: 0px
+        }
+    </style>
+    <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp"></script>
+    <script>
+    var baseURL= "http://54.172.106.76/static/";
+    var wsURL= "ws://54.172.106.76:8080/";
+  var wsStatus = 'NOT CONNECTED';
+  var reportCount = 0;
+  var foodIcons = ["cherry", "banana", "apple", "watermelon", "pizza"];
+  var iconBase = '';
+  var myLatlng;
+  var mapOptions;
+  var map;
+  var foodReports = 0;
+  $( document ).ready(function() {
+    myLatlng = new google.maps.LatLng(37.8914271,  -122.1229409 );
+    mapOptions = {
+      zoom: 8,
+      center: myLatlng
+    }
+    map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+    WebSocketTest();
+    var now = new Date();
+    $("#startTime").html("start time: " + now.getMonth() + "-" + now.getDate() + "-" + now.getYear() + " "+now.getHours() + ":" + now.getMinutes() + ":" + now.getSeconds())  ;
+  });
+  function getRandomColor() {
+    var letters = '0123456789ABCDEF'.split('');
+    var color = '';
+    for (var i = 0; i < 6; i++ ) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+  }
+
+  function updateWsStatus(){
+    $("#ws-status").html("websocket status:         " + wsStatus);
+  }
+
+  function WebSocketTest()
+  {
+    if ("WebSocket" in window)
+      {
+        updateWsStatus();
+
+        var ws 
+        try {  
+          //TODO: fix URL 
+          ws = new WebSocket(wsURL + "rt-events");
+        } catch(e) {
+          wsStatus="NOT CONNECTED";
+          updateWsStatus();
+        }
+        ws.onopen = function()
+        {
+          // Web Socket is connected, send data using send()
+          wsStatus="CONNECTED";
+          updateWsStatus();
+        };
+        ws.onmessage = function (evt)
+        {
+          var received_msg = JSON.parse(evt.data);
+ 
+          var markerLocation = new google.maps.LatLng(received_msg.lat, received_msg.lon);
+          var pinImage;
+          var pcNum = Math.floor((Math.random() * 10) + 1); 
+          console.log(pcNum);
+          if(pcNum % 3 == 0){
+            pinImage = new google.maps.MarkerImage(baseURL + "hungry.png");
+          }else{
+            foodReports++;
+            var pinColor = getRandomColor();
+            var foodNum = Math.floor((Math.random() * 10) + 1); 
+            foodIcons
+                pinImage = new google.maps.MarkerImage( baseURL+ foodIcons[foodNum % 5] + ".png");
+
+          }
+
+          var marker = new google.maps.Marker({
+            position: markerLocation,
+            map: map,
+            animation: google.maps.Animation.DROP,
+            icon: pinImage,
+            title: received_msg.qty
+          });
+          google.maps.event.addListener(marker, 'click', function() {
+
+              $("#markerDetail").html("location: some readable address " + marker.getPosition());
+              if(marker.getIcon().url.indexOf("hungry.png") == -1){
+                $("#markerDetail").html($("#markerDetail").html() + "<br/>type: food <br/>food for ~ number of people: " + marker.getTitle() );
+              }else{
+                $("#markerDetail").html($("#markerDetail").html() + "<br/> type: potential consumer");
+              }
+
+          });
+          reportCount++;
+          $("#reportCount").html("reported: " + reportCount + "( food# " + foodReports + ", potential consumer# "+ (reportCount - foodReports) + ")" );
+          $("#resolvedCount").html("resolved: " + parseInt(reportCount * 5.0/ 100.0));
+        setTimeout(function () {
+                marker.setMap(null);
+        }, 20*60000);
+        ws.onclose = function()
+        {
+          // websocket is closed.
+          wsStatus="DISCONNECTED";
+          updateWsStatus();        
+        };
+      }
+      }else
+        {
+          wsStatus="NOT SUPPORTED";
+          updateWsStatus(); 
+        }
+      }
+
+  function initialize() {
+    //var myLatlng = new google.maps.LatLng(-25.363882,131.044922);
+    //var mapOptions = {
+    //  zoom: 4,
+    //  center: myLatlng
+    //}
+  //  var map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+    
+  }
+
+  google.maps.event.addDomListener(window, 'load', initialize);
+
+
+
+
+
+
+
+    </script>
+</head>
+
+
+<body style="background-color:black">
+<div id="map-canvas" style="width:100%;height:80%"></div>
+<div style="width: 100%;">
+    <div id="info" style="float:left; width: 33%; color:#7CFC00; font-family: 'Courier New', Courier, monospace">
+        <div id="mode">data mode: real time data</div>
+        <div id="data_mode">data mode: test data (around San Francisco)</div>
+        <div id="startTime">start time:</div>
+        <div id="markerTimeout">marker timeout: 20m</div>
+
+    </div>
+    <div id="stats" style="float:left; width: 33%; color:#7CFC00; font-family: 'Courier New', Courier, monospace">
+        <div id="ws-status"></div>
+        <div id="reportCount"></div>
+        <div id="resolvedCount"></div>
+    </div>
+    <div id="entryDetail" style="float:left; width: 33%; color:#7CFC00; font-family: 'Courier New', Courier, monospace">
+        <div id="markerDetail"></div>
+    </div>
+    <br style="clear: left;"/>
+
+</div>
+<div id="markerInfo" style="color:#7CFC00; font-family: 'Courier New', Courier, monospace">
+    icon codes: potential consumer <img src= "http://54.172.106.76/static/hungry.png"/>
+    raw food (fruits/vegetables)<img src='http://54.172.106.76/static/cherry.png'/>
+    junk food <img src='http://54.172.106.76/static/pizza.png'/>
+    processed food <img src='http://54.172.106.76/static/banana.png'/>
+    cooked food <img src='http://54.172.106.76/static/apple.png'/>
+    other food <img src='http://54.172.106.76/static/watermelon.png'/>
+</div>
+</body>
+</html>
